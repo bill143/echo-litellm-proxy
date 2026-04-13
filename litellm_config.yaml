@@ -1,0 +1,65 @@
+general_settings:
+  master_key: ${LITELLM_MASTER_KEY}
+
+model_list:
+  # Tier 1: Compliance Core — Anthropic Claude
+  - model_name: claude-opus-4-6
+    litellm_params:
+      model: anthropic/claude-sonnet-4-20250514
+      api_key: ${ANTHROPIC_API_KEY}
+
+  # Tier 2: Long Document Engine — Google Gemini
+  - model_name: gemini-pro-long
+    litellm_params:
+      model: gemini/gemini-2.5-flash
+      api_key: ${GOOGLE_AI_API_KEY}
+
+  # Tier 3: Strategy & Risk — OpenAI
+  - model_name: gpt5-strategy
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: ${OPENAI_API_KEY}
+
+  # Tier 4: Bulk & Fast — DeepSeek
+  - model_name: deepseek-bulk
+    litellm_params:
+      model: deepseek/deepseek-chat
+      api_key: ${DEEPSEEK_API_KEY}
+
+  # ─── Additional Models ───────────────────────────────
+  - model_name: gpt-5.4-pro
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: ${OPENAI_API_KEY_2}
+
+  - model_name: claude-3-7-sonnet-20260219
+    litellm_params:
+      model: anthropic/claude-3-7-sonnet-20250219
+      api_key: ${ANTHROPIC_API_KEY_2}
+
+  - model_name: gemini-3.1-pro
+    litellm_params:
+      model: gemini/gemini-2.5-flash
+      api_key: ${GOOGLE_AI_API_KEY_2}
+
+  - model_name: kimi-k2.5
+    litellm_params:
+      model: openai/kimi-k2.5
+      api_key: ${MOONSHOT_API_KEY}
+      api_base: https://api.moonshot.cn/v1
+
+  - model_name: grok-3
+    litellm_params:
+      model: openai/grok-3
+      api_key: ${XAI_API_KEY}
+      api_base: https://api.x.ai/v1
+
+litellm_settings:
+  drop_params: true
+  request_timeout: 120
+  set_verbose: false
+
+router_settings:
+  allowed_fails: 3
+  retry_after: 15
+  enable_pre_call_checks: true

@@ -34,7 +34,7 @@ model_list:
       rpm: 30
       tpm: 400000
     model_info:
-      tier: "1-compliance"
+      routing_tier: "1-compliance"
       max_input_tokens: 1000000
       max_output_tokens: 128000
       input_cost_usd_per_1m: 5.00     # APPROX — verify at anthropic.com/pricing
@@ -50,7 +50,7 @@ model_list:
       rpm: 60
       tpm: 800000
     model_info:
-      tier: "2-long-context"
+      routing_tier: "2-long-context"
       max_input_tokens: 1000000
       max_output_tokens: 65536
       input_cost_usd_per_1m: 2.00     # VERIFIED (≤200K prompt; $4 above)
@@ -66,7 +66,7 @@ model_list:
       rpm: 60
       tpm: 600000
     model_info:
-      tier: "3-strategy"
+      routing_tier: "3-strategy"
       max_input_tokens: 400000
       max_output_tokens: 128000
       input_cost_usd_per_1m: 1.25     # APPROX — verify at openai.com/api/pricing
@@ -83,7 +83,7 @@ model_list:
       rpm: 300
       tpm: 2000000
     model_info:
-      tier: "4-bulk"
+      routing_tier: "4-bulk"
       max_input_tokens: 1000000
       max_output_tokens: 32768
       input_cost_usd_per_1m: 0.14     # VERIFIED (cache miss; $0.0028 cache hit)
@@ -98,7 +98,7 @@ model_list:
       rpm: 60
       tpm: 600000
     model_info:
-      tier: "utility-balanced"
+      routing_tier: "utility-balanced"
       max_input_tokens: 1000000
       max_output_tokens: 64000
       input_cost_usd_per_1m: 3.00     # APPROX
@@ -112,7 +112,7 @@ model_list:
       rpm: 200
       tpm: 1000000
     model_info:
-      tier: "utility-fast"
+      routing_tier: "utility-fast"
       max_input_tokens: 200000
       max_output_tokens: 64000
       input_cost_usd_per_1m: 1.00     # APPROX
@@ -127,7 +127,7 @@ model_list:
       rpm: 200
       tpm: 1000000
     model_info:
-      tier: "utility-mid"
+      routing_tier: "utility-mid"
       max_input_tokens: 400000
       max_output_tokens: 128000
       input_cost_usd_per_1m: 1.00     # APPROX (4x GPT-5 mini per OpenAI)
@@ -142,7 +142,7 @@ model_list:
       rpm: 300
       tpm: 2000000
     model_info:
-      tier: "utility-fast"
+      routing_tier: "utility-fast"
       max_input_tokens: 1000000
       max_output_tokens: 65536
       input_cost_usd_per_1m: 0.30     # APPROX
@@ -159,7 +159,7 @@ model_list:
       rpm: 200
       tpm: 1500000
     model_info:
-      tier: "utility-agentic"
+      routing_tier: "utility-agentic"
       max_input_tokens: 2000000
       max_output_tokens: 32768
       input_cost_usd_per_1m: 0.20     # APPROX
@@ -169,6 +169,12 @@ litellm_settings:
   drop_params: true
   request_timeout: 120
   set_verbose: false
+  # Phase-2 observability: log every request/failure to Langfuse. Captures
+  # alias, resolved model, tokens in/out, latency, and cost per call.
+  # Credentials come from the LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY /
+  # LANGFUSE_HOST env vars injected into the ECHO container (see docker-compose).
+  success_callback: ["langfuse"]
+  failure_callback: ["langfuse"]
 
 router_settings:
   num_retries: 2

@@ -1,2 +1,8 @@
+# Secrets — never commit real env files or key material
 .env
+.env.*
+!.env.example
+*.key
+
+# Local overrides
 *.local

@@ -3,6 +3,10 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
+# LiteLLM binds the $PORT Railway injects (see Dockerfile ENTRYPOINT).
+# Liveliness is unauthenticated, so the platform probe needs no master key.
+healthcheckPath = "/health/liveliness"
+healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5
 numReplicas = 1

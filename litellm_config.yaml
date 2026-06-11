@@ -1,58 +1,169 @@
+# ============================================================================
+# ECHO LiteLLM Proxy — litellm_config.yaml
+# Phase 1: Model audit (verified 2026-06-11)
+#
+# Rules encoded here:
+#   - Aliases match the REAL underlying model. No marketing names.
+#   - All model IDs verified against official provider docs on 2026-06-11.
+#   - 4-tier routing intent preserved (T1 compliance, T2 long-context,
+#     T3 strategy, T4 bulk) + utility models for fallback lanes.
+#   - Prices in model_info are informational (USD per 1M tokens).
+#     VERIFIED = confirmed against provider docs on audit date.
+#     APPROX   = best-known figure; confirm on provider pricing page
+#     before Railway deploy. LiteLLM's internal pricing DB handles
+#     actual cost tracking; we deliberately do not override it.
+#   - Removed: kimi-k2.5 (Moonshot deferred — access friction, revisit later)
+#
+# Retirements that forced this audit:
+#   - claude-sonnet-4-20250514 retires 2026-06-15 (was serving Tier 1!)
+#   - deepseek-chat / deepseek-reasoner retire 2026-07-24 (was Tier 4)
+# ============================================================================
+
 general_settings:
-  master_key: ${LITELLM_MASTER_KEY}
+  master_key: os.environ/LITELLM_MASTER_KEY
 
 model_list:
-  # Tier 1: Compliance Core — Anthropic Claude
-  - model_name: claude-opus-4-6
-    litellm_params:
-      model: anthropic/claude-sonnet-4-20250514
-      api_key: ${ANTHROPIC_API_KEY}
 
-  # Tier 2: Long Document Engine — Google Gemini
-  - model_name: gemini-pro-long
+  # ── TIER 1 · COMPLIANCE / HIGHEST REASONING ───────────────────────────────
+  # Anthropic's most capable Opus-tier model. 1M context, 128K output.
+  # Source: https://platform.claude.com/docs/en/about-claude/models/overview
+  - model_name: claude-opus-4-8
     litellm_params:
-      model: gemini/gemini-2.5-flash
-      api_key: ${GOOGLE_AI_API_KEY}
+      model: anthropic/claude-opus-4-8
+      api_key: os.environ/ANTHROPIC_API_KEY
+      rpm: 30
+      tpm: 400000
+    model_info:
+      tier: "1-compliance"
+      max_input_tokens: 1000000
+      max_output_tokens: 128000
+      input_cost_usd_per_1m: 5.00     # APPROX — verify at anthropic.com/pricing
+      output_cost_usd_per_1m: 25.00   # APPROX
 
-  # Tier 3: Strategy & Risk — OpenAI
-  - model_name: gpt5-strategy
+  # ── TIER 2 · LONG-CONTEXT DOCUMENT PROCESSING ─────────────────────────────
+  # Google's most advanced reasoning model; 1M ctx, repo/document-scale input.
+  # Source: https://ai.google.dev/gemini-api/docs/models/gemini-3.1-pro-preview
+  - model_name: gemini-3.1-pro-preview
     litellm_params:
-      model: openai/gpt-4o
-      api_key: ${OPENAI_API_KEY}
+      model: gemini/gemini-3.1-pro-preview
+      api_key: os.environ/GOOGLE_AI_API_KEY
+      rpm: 60
+      tpm: 800000
+    model_info:
+      tier: "2-long-context"
+      max_input_tokens: 1000000
+      max_output_tokens: 65536
+      input_cost_usd_per_1m: 2.00     # VERIFIED (≤200K prompt; $4 above)
+      output_cost_usd_per_1m: 12.00   # VERIFIED (≤200K prompt; $18 above)
 
-  # Tier 4: Bulk & Fast — DeepSeek
-  - model_name: deepseek-bulk
+  # ── TIER 3 · STRATEGY / GENERAL REASONING ─────────────────────────────────
+  # OpenAI flagship, API-available since 2026-04-24.
+  # Source: https://openai.com/index/introducing-gpt-5-5/
+  - model_name: gpt-5.5
     litellm_params:
-      model: deepseek/deepseek-chat
-      api_key: ${DEEPSEEK_API_KEY}
+      model: openai/gpt-5.5
+      api_key: os.environ/OPENAI_API_KEY
+      rpm: 60
+      tpm: 600000
+    model_info:
+      tier: "3-strategy"
+      max_input_tokens: 400000
+      max_output_tokens: 128000
+      input_cost_usd_per_1m: 1.25     # APPROX — verify at openai.com/api/pricing
+      output_cost_usd_per_1m: 10.00   # APPROX
 
-  # ─── Additional Models ───────────────────────────────
-  - model_name: gpt-5.4-pro
+  # ── TIER 4 · BULK / CHEAP ─────────────────────────────────────────────────
+  # DeepSeek's high-speed cost-efficient frontier model. Replaces the
+  # deepseek-chat legacy alias (retires 2026-07-24).
+  # Source: https://api-docs.deepseek.com/quick_start/pricing
+  - model_name: deepseek-v4-flash
     litellm_params:
-      model: openai/gpt-4o
-      api_key: ${OPENAI_API_KEY_2}
+      model: deepseek/deepseek-v4-flash
+      api_key: os.environ/DEEPSEEK_API_KEY
+      rpm: 300
+      tpm: 2000000
+    model_info:
+      tier: "4-bulk"
+      max_input_tokens: 1000000
+      max_output_tokens: 32768
+      input_cost_usd_per_1m: 0.14     # VERIFIED (cache miss; $0.0028 cache hit)
+      output_cost_usd_per_1m: 0.28    # VERIFIED
 
-  - model_name: claude-3-7-sonnet-20260219
+  # ── UTILITY · BALANCED (fallback lane for T2/T3) ──────────────────────────
+  # Best Anthropic speed/intelligence balance. 1M ctx, 64K output.
+  - model_name: claude-sonnet-4-6
     litellm_params:
-      model: anthropic/claude-3-7-sonnet-20250219
-      api_key: ${ANTHROPIC_API_KEY_2}
+      model: anthropic/claude-sonnet-4-6
+      api_key: os.environ/ANTHROPIC_API_KEY
+      rpm: 60
+      tpm: 600000
+    model_info:
+      tier: "utility-balanced"
+      max_input_tokens: 1000000
+      max_output_tokens: 64000
+      input_cost_usd_per_1m: 3.00     # APPROX
+      output_cost_usd_per_1m: 15.00   # APPROX
 
-  - model_name: gemini-3.1-pro
+  # ── UTILITY · FAST/CHEAP ANTHROPIC ────────────────────────────────────────
+  - model_name: claude-haiku-4-5
     litellm_params:
-      model: gemini/gemini-2.5-flash
-      api_key: ${GOOGLE_AI_API_KEY_2}
+      model: anthropic/claude-haiku-4-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+      rpm: 200
+      tpm: 1000000
+    model_info:
+      tier: "utility-fast"
+      max_input_tokens: 200000
+      max_output_tokens: 64000
+      input_cost_usd_per_1m: 1.00     # APPROX
+      output_cost_usd_per_1m: 5.00    # APPROX
 
-  - model_name: kimi-k2.5
+  # ── UTILITY · MID-COST OPENAI ─────────────────────────────────────────────
+  # Source: https://help.openai.com/en/articles/9624314-model-release-notes
+  - model_name: gpt-5.4-mini
     litellm_params:
-      model: openai/kimi-k2.5
-      api_key: ${MOONSHOT_API_KEY}
-      api_base: https://api.moonshot.cn/v1
+      model: openai/gpt-5.4-mini
+      api_key: os.environ/OPENAI_API_KEY
+      rpm: 200
+      tpm: 1000000
+    model_info:
+      tier: "utility-mid"
+      max_input_tokens: 400000
+      max_output_tokens: 128000
+      input_cost_usd_per_1m: 1.00     # APPROX (4x GPT-5 mini per OpenAI)
+      output_cost_usd_per_1m: 8.00    # APPROX
 
-  - model_name: grok-3
+  # ── UTILITY · FAST GOOGLE (bulk fallback) ─────────────────────────────────
+  # Current stable fast Gemini. Source: https://ai.google.dev/gemini-api/docs/models
+  - model_name: gemini-3.5-flash
     litellm_params:
-      model: openai/grok-3
-      api_key: ${XAI_API_KEY}
+      model: gemini/gemini-3.5-flash
+      api_key: os.environ/GOOGLE_AI_API_KEY
+      rpm: 300
+      tpm: 2000000
+    model_info:
+      tier: "utility-fast"
+      max_input_tokens: 1000000
+      max_output_tokens: 65536
+      input_cost_usd_per_1m: 0.30     # APPROX
+      output_cost_usd_per_1m: 2.50    # APPROX
+
+  # ── UTILITY · FAST AGENTIC xAI (bulk fallback #2) ─────────────────────────
+  # 2M context, tool-calling optimized. Replaces legacy grok-3 slug.
+  # Source: https://docs.x.ai/developers/models
+  - model_name: grok-4.1-fast
+    litellm_params:
+      model: openai/grok-4-1-fast-reasoning
+      api_key: os.environ/XAI_API_KEY
       api_base: https://api.x.ai/v1
+      rpm: 200
+      tpm: 1500000
+    model_info:
+      tier: "utility-agentic"
+      max_input_tokens: 2000000
+      max_output_tokens: 32768
+      input_cost_usd_per_1m: 0.20     # APPROX
+      output_cost_usd_per_1m: 0.50    # APPROX
 
 litellm_settings:
   drop_params: true
@@ -60,6 +171,15 @@ litellm_settings:
   set_verbose: false
 
 router_settings:
+  num_retries: 2
   allowed_fails: 3
   retry_after: 15
   enable_pre_call_checks: true
+  # Provider-failure fallback chains (Phase 1 task 4e):
+  fallbacks:
+    - claude-opus-4-8: ["gpt-5.5"]                          # T1: Anthropic → OpenAI
+    - gemini-3.1-pro-preview: ["claude-sonnet-4-6"]         # T2: Google → Anthropic (both 1M ctx)
+    - gpt-5.5: ["claude-sonnet-4-6"]                        # T3: OpenAI → Anthropic
+    - deepseek-v4-flash: ["gemini-3.5-flash", "grok-4.1-fast"]  # T4: DeepSeek → Google → xAI
+    - claude-sonnet-4-6: ["gpt-5.4-mini"]
+    - claude-haiku-4-5: ["gemini-3.5-flash"]
